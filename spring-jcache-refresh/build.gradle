@@ -5,6 +5,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework:spring-aspects'
     implementation 'javax.cache:cache-api'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     testCompile 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

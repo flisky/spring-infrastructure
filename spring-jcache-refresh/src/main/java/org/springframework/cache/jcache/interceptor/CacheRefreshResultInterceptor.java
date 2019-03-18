@@ -20,15 +20,15 @@ import java.util.concurrent.TimeUnit;
 
 public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     private final double expiryFactor;
-    private final Duration expiryEternal;
+    private final Duration externalExpiry;
     private final Duration executionTimeout;
 
     private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>(16);
 
-    public CacheRefreshResultInterceptor(double expiryFactor, Duration expiryEternal, Duration executionTimeout, CacheErrorHandler errorHandler) {
+    public CacheRefreshResultInterceptor(double expiryFactor, Duration externalExpiry, Duration executionTimeout, CacheErrorHandler errorHandler) {
         super(errorHandler);
         this.expiryFactor = expiryFactor;
-        this.expiryEternal = expiryEternal;
+        this.externalExpiry = externalExpiry;
         this.executionTimeout = executionTimeout;
     }
 
@@ -48,10 +48,11 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
                 // extra check
                 if (cachedValue instanceof EpochValueWrapper) {
                     if (((EpochValueWrapper) cachedValue).isExpired()) {
-                        Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey))
-                                .ignoreElement()
-                                .timeout(executionTimeout)
-                                .subscribe();
+                        Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement();
+                        if (!executionTimeout.isZero()) {
+                            mono = mono.timeout(executionTimeout);
+                        }
+                        mono.subscribe();
                     }
                 }
                 return cachedValue.get();
@@ -103,16 +104,18 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         CompleteConfiguration config = cache.getNativeCache().getConfiguration(CompleteConfiguration.class);
         ExpiryPolicy expiryPolicy = (ExpiryPolicy) config.getExpiryPolicyFactory().create();
         javax.cache.expiry.Duration creationExpiry = expiryPolicy.getExpiryForCreation();
-        if (creationExpiry.isZero()) {
-            return cache;
-        }
         Duration duration;
-        if (creationExpiry.isEternal()) {
-            duration = expiryEternal;
+        if (creationExpiry.isZero()) {
+            duration = Duration.ZERO;
+        } else if (creationExpiry.isEternal()) {
+            duration = externalExpiry;
         } else {
             long millis = creationExpiry.getTimeUnit().convert(creationExpiry.getDurationAmount(), TimeUnit.MILLISECONDS);
             millis = Double.valueOf(millis * expiryFactor).longValue();
             duration = Duration.ofMillis(millis);
+        }
+        if (duration.isZero()) {
+            return cache;
         }
         return new JCacheRefreshCache(cache.getNativeCache(), duration, cache.isAllowNullValues());
     }
