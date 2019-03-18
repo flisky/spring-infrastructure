@@ -8,15 +8,14 @@ import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.cache.jcache.JCacheCache;
 import org.springframework.cache.jcache.JCacheRefreshCache;
 import org.springframework.cache.jcache.support.EpochValueWrapper;
+import org.springframework.cache.jcache.support.JCacheExpiryDuration;
 import org.springframework.lang.Nullable;
 import reactor.core.publisher.Mono;
 
 import javax.cache.CacheManager;
 import javax.cache.Caching;
-import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.expiry.CreatedExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -26,15 +25,21 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     private final double expiryFactor;
     private final Duration externalExpiry;
     private final Duration executionTimeout;
+    private final JCacheExpiryDuration expiryDuration;
 
     private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>(16);
     private final javax.cache.Cache<String, Boolean> bustCache;
 
-    public CacheRefreshResultInterceptor(double expiryFactor, Duration externalExpiry, Duration executionTimeout, CacheErrorHandler errorHandler) {
+    public CacheRefreshResultInterceptor(double expiryFactor,
+                                         Duration externalExpiry,
+                                         Duration executionTimeout,
+                                         JCacheExpiryDuration expiryDuration,
+                                         CacheErrorHandler errorHandler) {
         super(errorHandler);
         this.expiryFactor = expiryFactor;
         this.externalExpiry = externalExpiry;
         this.executionTimeout = executionTimeout;
+        this.expiryDuration = expiryDuration;
         this.bustCache = createBustCache(executionTimeout);
     }
 
@@ -51,7 +56,6 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         if (!operation.isAlwaysInvoked()) {
             Cache.ValueWrapper cachedValue = doGet(cache, cacheKey);
             if (cachedValue != null) {
-                // extra check
                 if (cachedValue instanceof EpochValueWrapper) {
                     if (((EpochValueWrapper) cachedValue).isExpired() && !inFlight(cache, cacheKey)) {
                         Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement();
@@ -106,22 +110,15 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     }
 
     private Cache decorateCache(JCacheCache cache) {
-        @SuppressWarnings("unchecked")
-        CompleteConfiguration config = cache.getNativeCache().getConfiguration(CompleteConfiguration.class);
-        ExpiryPolicy expiryPolicy = (ExpiryPolicy) config.getExpiryPolicyFactory().create();
-        javax.cache.expiry.Duration creationExpiry = expiryPolicy.getExpiryForCreation();
-        Duration duration;
-        if (creationExpiry.isZero()) {
-            duration = Duration.ZERO;
-        } else if (creationExpiry.isEternal()) {
-            duration = externalExpiry;
-        } else {
-            long millis = creationExpiry.getTimeUnit().convert(creationExpiry.getDurationAmount(), TimeUnit.MILLISECONDS);
-            millis = Double.valueOf(millis * expiryFactor).longValue();
-            duration = Duration.ofMillis(millis);
-        }
+        javax.cache.expiry.Duration duration = expiryDuration.getDuration(cache.getNativeCache());
         if (duration.isZero()) {
             return cache;
+        }
+        if (duration.isEternal()) {
+            duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, externalExpiry.toMillis());
+        } else {
+            double millis = duration.getTimeUnit().toMillis(duration.getDurationAmount()) * expiryFactor;
+            duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, Double.valueOf(millis).longValue());
         }
         return new JCacheRefreshCache(cache.getNativeCache(), duration, cache.isAllowNullValues());
     }

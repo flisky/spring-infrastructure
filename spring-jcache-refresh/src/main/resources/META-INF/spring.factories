@@ -1,2 +1,3 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  org.springframework.cache.jcache.config.JCacheRefreshConfiguration
+  org.springframework.cache.jcache.config.JCacheRefreshConfiguration,\
+  org.springframework.cache.jcache.config.CaffeineJCacheRefreshConfiguration

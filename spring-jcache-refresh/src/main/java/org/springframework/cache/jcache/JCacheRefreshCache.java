@@ -3,10 +3,10 @@ package org.springframework.cache.jcache;
 import org.springframework.cache.jcache.support.EpochValueWrapper;
 
 import javax.cache.Cache;
-import java.time.Duration;
+import javax.cache.expiry.Duration;
 
 public class JCacheRefreshCache extends JCacheCache {
-    private long millis;
+    private Duration duration;
 
     public JCacheRefreshCache(Cache<Object, Object> cache, Duration duration) {
         this(cache, duration, true);
@@ -14,7 +14,7 @@ public class JCacheRefreshCache extends JCacheCache {
 
     public JCacheRefreshCache(Cache<Object, Object> cache, Duration duration, boolean isAllowNullValues) {
         super(cache, isAllowNullValues);
-        this.millis = duration.toMillis();
+        this.duration = duration;
     }
 
     @Override
@@ -28,7 +28,7 @@ public class JCacheRefreshCache extends JCacheCache {
             throw new IllegalArgumentException(
                     "Cache '" + getName() + "' is configured to not allow null values but null was provided");
         }
-        return EpochValueWrapper.builder().epoch(System.currentTimeMillis() + millis).value(userValue).build();
+        return EpochValueWrapper.builder().epoch(duration.getAdjustedTime(System.currentTimeMillis())).value(userValue).build();
     }
 
     @Override

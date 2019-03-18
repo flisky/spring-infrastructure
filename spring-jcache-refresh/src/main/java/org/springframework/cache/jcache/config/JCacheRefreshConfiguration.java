@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.cache.JCacheManagerCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.aspectj.JCacheCacheAspect;
 import org.springframework.cache.jcache.interceptor.CacheRefreshResultInterceptor;
+import org.springframework.cache.jcache.support.JCacheExpiryDuration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.Assert;
@@ -16,13 +17,13 @@ import java.lang.reflect.Field;
 public class JCacheRefreshConfiguration {
 
     @Bean
-    public JCacheManagerCustomizer customizer(JCacheRefreshProperties properties) {
+    public JCacheManagerCustomizer customizer(JCacheRefreshProperties properties, JCacheExpiryDuration expiryDuration) {
         JCacheCacheAspect aspect = JCacheCacheAspect.aspectOf();
         Field field = ReflectionUtils.findField(JCacheCacheAspect.class, "cacheResultInterceptor");
         Assert.notNull(field, "cacheResultInterceptor field");
         field.setAccessible(true);
         CacheRefreshResultInterceptor interceptor = new CacheRefreshResultInterceptor(properties.getExpiryFactor(),
-                properties.getExternalExpiry(), properties.executionTimeout, aspect.getErrorHandler());
+                properties.getExternalExpiry(), properties.executionTimeout, expiryDuration, aspect.getErrorHandler());
         ReflectionUtils.setField(field, aspect, interceptor);
         field.setAccessible(false);
 
