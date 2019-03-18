@@ -101,7 +101,8 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
                 if (cache == null) {
                     cache = super.resolveCache(context);
                     if (cache != null) {
-                        this.cacheMap.put(name, decorateCache((JCacheCache) cache));
+                        cache = decorateCache((JCacheCache) cache);
+                        this.cacheMap.put(name, cache);
                     }
                 }
                 return cache;
