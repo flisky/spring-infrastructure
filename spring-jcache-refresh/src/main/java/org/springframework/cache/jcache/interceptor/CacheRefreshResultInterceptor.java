@@ -5,7 +5,7 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.cache.interceptor.CacheResolver;
-import org.springframework.cache.jcache.EpochJCacheCache;
+import org.springframework.cache.jcache.JCacheRefreshCache;
 import org.springframework.cache.jcache.JCacheCache;
 import org.springframework.cache.jcache.support.EpochValueWrapper;
 import org.springframework.lang.Nullable;
@@ -114,7 +114,7 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
             millis = Double.valueOf(millis * expiryFactor).longValue();
             duration = Duration.ofMillis(millis);
         }
-        return new EpochJCacheCache(cache.getNativeCache(), duration, cache.isAllowNullValues());
+        return new JCacheRefreshCache(cache.getNativeCache(), duration, cache.isAllowNullValues());
     }
 
     @Nullable

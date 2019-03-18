@@ -5,14 +5,14 @@ import org.springframework.cache.jcache.support.EpochValueWrapper;
 import javax.cache.Cache;
 import java.time.Duration;
 
-public class EpochJCacheCache extends JCacheCache {
+public class JCacheRefreshCache extends JCacheCache {
     private long millis;
 
-    public EpochJCacheCache(Cache<Object, Object> cache, Duration duration) {
+    public JCacheRefreshCache(Cache<Object, Object> cache, Duration duration) {
         this(cache, duration, true);
     }
 
-    public EpochJCacheCache(Cache<Object, Object> cache, Duration duration, boolean isAllowNullValues) {
+    public JCacheRefreshCache(Cache<Object, Object> cache, Duration duration, boolean isAllowNullValues) {
         super(cache, isAllowNullValues);
         this.millis = duration.toMillis();
     }
