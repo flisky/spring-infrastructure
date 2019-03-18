@@ -1,16 +1,20 @@
 package org.springframework.cache.jcache.support;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import org.springframework.cache.Cache;
 
 import java.io.Serializable;
 import java.time.Duration;
 
 @Builder
+@AllArgsConstructor
 public class EpochValueWrapper implements Cache.ValueWrapper, Serializable {
-    private Object value;
-
+    @Getter
     private long epoch;
+
+    private Object value;
 
     @Override
     public Object get() {
@@ -21,12 +25,7 @@ public class EpochValueWrapper implements Cache.ValueWrapper, Serializable {
         return System.currentTimeMillis() > epoch;
     }
 
-    public EpochValueWrapper(Object value, long epoch) {
-        this.value = value;
-        this.epoch = epoch;
-    }
-
     public EpochValueWrapper(Object value, Duration duration) {
-        this(value, System.currentTimeMillis() + duration.toMillis());
+        this(System.currentTimeMillis() + duration.toMillis(), value);
     }
 }

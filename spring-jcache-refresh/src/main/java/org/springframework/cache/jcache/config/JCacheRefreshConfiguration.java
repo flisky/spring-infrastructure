@@ -19,7 +19,9 @@ public class JCacheRefreshConfiguration {
         Field field = ReflectionUtils.findField(JCacheCacheAspect.class, "cacheResultInterceptor");
         Assert.notNull(field, "cacheResultInterceptor field");
         field.setAccessible(true);
-        ReflectionUtils.setField(field, aspect, new CacheRefreshResultInterceptor(aspect.getErrorHandler(), Duration.ofHours(1)));
+        CacheRefreshResultInterceptor interceptor = new CacheRefreshResultInterceptor(0.95,
+                Duration.ofHours(1), Duration.ofSeconds(15), aspect.getErrorHandler());
+        ReflectionUtils.setField(field, aspect, interceptor);
         field.setAccessible(false);
     }
 }
