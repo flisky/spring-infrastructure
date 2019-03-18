@@ -1,0 +1,3 @@
+rootProject.name = 'spring-infrastructure'
+include 'spring-jcache-refresh'
+
