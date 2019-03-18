@@ -10,22 +10,23 @@ import java.time.Duration;
 
 @Builder
 @AllArgsConstructor
-public class EpochValueWrapper implements Cache.ValueWrapper, Serializable {
+public class EpochValueWrapper<T> implements Cache.ValueWrapper, Serializable {
+    private T value;
+
     @Getter
     private long epoch;
 
-    private Object value;
+
+    public EpochValueWrapper(T value, Duration duration) {
+        this(value, System.currentTimeMillis() + duration.toMillis());
+    }
 
     @Override
-    public Object get() {
+    public T get() {
         return value;
     }
 
     public boolean isExpired() {
         return System.currentTimeMillis() > epoch;
-    }
-
-    public EpochValueWrapper(Object value, Duration duration) {
-        this(System.currentTimeMillis() + duration.toMillis(), value);
     }
 }

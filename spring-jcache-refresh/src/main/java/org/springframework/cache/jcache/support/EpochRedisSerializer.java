@@ -1,21 +1,22 @@
 package org.springframework.cache.jcache.support;
 
+import lombok.Data;
 import lombok.NonNull;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 
 import java.nio.ByteBuffer;
 
-public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrapper> {
+@Data
+public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrapper<T>> {
     private static final byte prefix = 0x1;
 
     @NonNull
     private RedisSerializer<T> delegate;
 
     @Override
-    public byte[] serialize(EpochValueWrapper wrapper) throws SerializationException {
-        @SuppressWarnings("unchecked")
-        byte[] serialized = delegate.serialize((T) wrapper.get());
+    public byte[] serialize(EpochValueWrapper<T> wrapper) throws SerializationException {
+        byte[] serialized = delegate.serialize(wrapper.get());
         if (serialized == null) {
             return null;
         }
@@ -26,7 +27,7 @@ public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrappe
     }
 
     @Override
-    public EpochValueWrapper deserialize(byte[] bytes) throws SerializationException {
+    public EpochValueWrapper<T> deserialize(byte[] bytes) throws SerializationException {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         long deadline = 0;
         if (buffer.get() == prefix) {
@@ -38,6 +39,6 @@ public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrappe
         if (value == null) {
             return null;
         }
-        return EpochValueWrapper.builder().epoch(deadline).value(value).build();
+        return EpochValueWrapper.<T>builder().epoch(deadline).value(value).build();
     }
 }
