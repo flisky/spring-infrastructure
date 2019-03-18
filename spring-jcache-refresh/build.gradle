@@ -3,6 +3,7 @@ sourceCompatibility = 1.8
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework:spring-aspects'
     implementation 'javax.cache:cache-api'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
