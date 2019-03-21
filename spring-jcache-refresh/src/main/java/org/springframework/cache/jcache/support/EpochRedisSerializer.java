@@ -6,6 +6,7 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 @Data
 public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrapper<T>> {
@@ -28,14 +29,12 @@ public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrappe
 
     @Override
     public EpochValueWrapper<T> deserialize(byte[] bytes) throws SerializationException {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
         long deadline = 0;
-        if (buffer.get() == prefix) {
-            deadline = buffer.getLong();
-        } else {
-            buffer.flip();
+        if (bytes.length > 8 && bytes[0] == prefix) {
+            deadline = ByteBuffer.wrap(bytes, 1, 9).getLong();
+            bytes = Arrays.copyOfRange(bytes, 9, bytes.length);
         }
-        T value = delegate.deserialize(buffer.array());
+        T value = delegate.deserialize(bytes);
         if (value == null) {
             return null;
         }
