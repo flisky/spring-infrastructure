@@ -94,19 +94,18 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         Cache cache = this.cacheMap.get(name);
         if (cache != null) {
             return cache;
-        } else {
-            // Fully synchronize now for missing cache creation...
-            synchronized (this.cacheMap) {
-                cache = this.cacheMap.get(name);
-                if (cache == null) {
-                    cache = super.resolveCache(context);
-                    if (cache != null) {
-                        cache = decorateCache((JCacheCache) cache);
-                        this.cacheMap.put(name, cache);
-                    }
+        }
+        // Fully synchronize now for missing cache creation...
+        synchronized (this.cacheMap) {
+            cache = this.cacheMap.get(name);
+            if (cache == null) {
+                cache = super.resolveCache(context);
+                if (cache instanceof JCacheCache) {
+                    cache = decorateCache((JCacheCache) cache);
                 }
-                return cache;
+                this.cacheMap.put(name, cache);
             }
+            return cache;
         }
     }
 
