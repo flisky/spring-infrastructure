@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     private final double expiryFactor;
-    private final Duration externalExpiry;
+    private final Duration eternalExpiry;
     private final Duration executionTimeout;
     private final JCacheExpiryDuration expiryDuration;
 
@@ -31,13 +31,13 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     private final javax.cache.Cache<String, Boolean> bustCache;
 
     public CacheRefreshResultInterceptor(double expiryFactor,
-                                         Duration externalExpiry,
+                                         Duration eternalExpiry,
                                          Duration executionTimeout,
                                          JCacheExpiryDuration expiryDuration,
                                          CacheErrorHandler errorHandler) {
         super(errorHandler);
         this.expiryFactor = expiryFactor;
-        this.externalExpiry = externalExpiry;
+        this.eternalExpiry = eternalExpiry;
         this.executionTimeout = executionTimeout;
         this.expiryDuration = expiryDuration;
         this.bustCache = createBustCache(executionTimeout);
@@ -115,7 +115,7 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
             return cache;
         }
         if (duration.isEternal()) {
-            duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, externalExpiry.toMillis());
+            duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, eternalExpiry.toMillis());
         } else {
             double millis = duration.getTimeUnit().toMillis(duration.getDurationAmount()) * expiryFactor;
             duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, Double.valueOf(millis).longValue());

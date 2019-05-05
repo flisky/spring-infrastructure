@@ -9,6 +9,6 @@ import java.time.Duration;
 @ConfigurationProperties("spring.cache.refresh")
 public class JCacheRefreshProperties {
     double expiryFactor = 0.95;
-    Duration externalExpiry = Duration.ZERO;
+    Duration eternalExpiry = Duration.ZERO;
     Duration executionTimeout = Duration.ZERO;
 }

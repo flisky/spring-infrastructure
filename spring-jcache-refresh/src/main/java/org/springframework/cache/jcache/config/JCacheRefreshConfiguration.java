@@ -23,7 +23,7 @@ public class JCacheRefreshConfiguration {
         Assert.notNull(field, "cacheResultInterceptor field");
         field.setAccessible(true);
         CacheRefreshResultInterceptor interceptor = new CacheRefreshResultInterceptor(properties.getExpiryFactor(),
-                properties.getExternalExpiry(), properties.executionTimeout, expiryDuration, aspect.getErrorHandler());
+                properties.getEternalExpiry(), properties.executionTimeout, expiryDuration, aspect.getErrorHandler());
         ReflectionUtils.setField(field, aspect, interceptor);
         field.setAccessible(false);
 
