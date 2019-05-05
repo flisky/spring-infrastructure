@@ -111,14 +111,14 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
 
     private Cache decorateCache(JCacheCache cache) {
         javax.cache.expiry.Duration duration = expiryDuration.getDuration(cache.getNativeCache());
-        if (duration.isZero()) {
-            return cache;
-        }
         if (duration.isEternal()) {
             duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, eternalExpiry.toMillis());
         } else {
             double millis = duration.getTimeUnit().toMillis(duration.getDurationAmount()) * expiryFactor;
             duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, Double.valueOf(millis).longValue());
+        }
+        if (duration.isZero()) {
+            return cache;
         }
         return new JCacheRefreshCache(cache.getNativeCache(), duration, cache.isAllowNullValues());
     }
