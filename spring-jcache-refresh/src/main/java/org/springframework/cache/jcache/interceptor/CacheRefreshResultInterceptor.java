@@ -11,6 +11,7 @@ import org.springframework.cache.jcache.support.EpochValueWrapper;
 import org.springframework.cache.jcache.support.JCacheExpiryDuration;
 import org.springframework.lang.Nullable;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -58,7 +59,7 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
             if (cachedValue != null) {
                 if (cachedValue instanceof EpochValueWrapper) {
                     if (((EpochValueWrapper) cachedValue).isExpired() && !inFlight(cache, cacheKey)) {
-                        Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement();
+                        Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement().subscribeOn(Schedulers.elastic());
                         if (!executionTimeout.isZero()) {
                             mono = mono.timeout(executionTimeout);
                         }
