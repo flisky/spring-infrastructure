@@ -16,7 +16,6 @@ import reactor.core.scheduler.Schedulers;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
-import javax.cache.expiry.CreatedExpiryPolicy;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,7 +40,7 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         this.eternalExpiry = eternalExpiry;
         this.executionTimeout = executionTimeout;
         this.expiryDuration = expiryDuration;
-        this.bustCache = createBustCache(executionTimeout);
+        this.bustCache = createBustCache();
     }
 
     @Override
@@ -123,14 +122,9 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     }
 
 
-    private javax.cache.Cache<String, Boolean> createBustCache(Duration executionTimeout) {
+    private javax.cache.Cache<String, Boolean> createBustCache() {
         CacheManager manager = Caching.getCachingProvider().getCacheManager();
         MutableConfiguration<String, Boolean> config = new MutableConfiguration<>();
-        if (executionTimeout.isZero()) {
-            executionTimeout = Duration.ofSeconds(15);
-        }
-        javax.cache.expiry.Duration duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, executionTimeout.toMillis());
-        config.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(duration));
         return manager.createCache("spring-jcache-refresh", config);
     }
 
