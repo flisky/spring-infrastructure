@@ -57,14 +57,12 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         if (!operation.isAlwaysInvoked()) {
             Cache.ValueWrapper cachedValue = doGet(cache, cacheKey);
             if (cachedValue != null) {
-                if (cachedValue instanceof EpochValueWrapper) {
-                    if (((EpochValueWrapper) cachedValue).isExpired() && !inFlight(cache, cacheKey)) {
-                        Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement().subscribeOn(Schedulers.elastic());
-                        if (!executionTimeout.isZero()) {
-                            mono = mono.timeout(executionTimeout);
-                        }
-                        mono.doOnTerminate(() -> bustCache.remove(flightKey(cache, cacheKey))).subscribe();
+                if (cachedValue instanceof EpochValueWrapper && ((EpochValueWrapper) cachedValue).isExpired() && !inFlight(cache, cacheKey)) {
+                    Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement().subscribeOn(Schedulers.elastic());
+                    if (!executionTimeout.isZero()) {
+                        mono = mono.timeout(executionTimeout);
                     }
+                    mono.doOnTerminate(() -> removeFlight(cache, cacheKey)).subscribe();
                 }
                 return cachedValue.get();
             }
@@ -137,7 +135,7 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
     }
 
     private String flightKey(Cache cache, Object cacheKey) {
-        return cache.getName() + "--" + cacheKey.hashCode();
+        return cache.getName() + ":" + cacheKey.toString();
     }
 
     private boolean inFlight(Cache cache, Object cacheKey) {
@@ -148,6 +146,10 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         }
         bustCache.put(key, true);
         return false;
+    }
+
+    private void removeFlight(Cache cache, Object cacheKey) {
+        bustCache.remove(flightKey(cache, cacheKey));
     }
 
     @Nullable
