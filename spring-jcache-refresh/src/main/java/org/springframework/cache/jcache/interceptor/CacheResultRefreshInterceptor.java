@@ -5,41 +5,29 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.cache.interceptor.CacheResolver;
-import org.springframework.cache.jcache.JCacheCache;
-import org.springframework.cache.jcache.JCacheRefreshCache;
 import org.springframework.cache.jcache.support.EpochValueWrapper;
-import org.springframework.cache.jcache.support.JCacheExpiryDuration;
 import org.springframework.lang.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import javax.cache.CacheManager;
 import javax.cache.Caching;
+import javax.cache.annotation.CacheResult;
 import javax.cache.configuration.MutableConfiguration;
 import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
-public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
-    private final double expiryFactor;
-    private final Duration eternalExpiry;
+public class CacheResultRefreshInterceptor extends CacheResultInterceptor {
+    private final CacheBaseRefreshInterceptor<CacheResultOperation, CacheResult> refreshInterceptor;
     private final Duration executionTimeout;
-    private final JCacheExpiryDuration expiryDuration;
 
-    private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>(16);
     private final javax.cache.Cache<String, Boolean> bustCache;
 
-    public CacheRefreshResultInterceptor(double expiryFactor,
-                                         Duration eternalExpiry,
+    public CacheResultRefreshInterceptor(CacheBaseRefreshInterceptor<CacheResultOperation, CacheResult> refreshInterceptor,
                                          Duration executionTimeout,
-                                         JCacheExpiryDuration expiryDuration,
                                          CacheErrorHandler errorHandler) {
         super(errorHandler);
-        this.expiryFactor = expiryFactor;
-        this.eternalExpiry = eternalExpiry;
+        this.refreshInterceptor = refreshInterceptor;
         this.executionTimeout = executionTimeout;
-        this.expiryDuration = expiryDuration;
         this.bustCache = createBustCache();
     }
 
@@ -51,7 +39,7 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
         CacheResultOperation operation = context.getOperation();
         Object cacheKey = generateKey(context);
 
-        Cache cache = resolveCache(context);
+        Cache cache = refreshInterceptor.resolveRefreshCache(context);
 
         if (!operation.isAlwaysInvoked()) {
             Cache.ValueWrapper cachedValue = doGet(cache, cacheKey);
@@ -85,42 +73,6 @@ public class CacheRefreshResultInterceptor extends CacheResultInterceptor {
             throw ex;
         }
     }
-
-    @Override
-    protected Cache resolveCache(CacheOperationInvocationContext<CacheResultOperation> context) {
-        String name = context.getOperation().getCacheName();
-        Cache cache = this.cacheMap.get(name);
-        if (cache != null) {
-            return cache;
-        }
-        // Fully synchronize now for missing cache creation...
-        synchronized (this.cacheMap) {
-            cache = this.cacheMap.get(name);
-            if (cache == null) {
-                cache = super.resolveCache(context);
-                if (cache instanceof JCacheCache) {
-                    cache = decorateCache((JCacheCache) cache);
-                }
-                this.cacheMap.put(name, cache);
-            }
-            return cache;
-        }
-    }
-
-    private Cache decorateCache(JCacheCache cache) {
-        javax.cache.expiry.Duration duration = expiryDuration.getDuration(cache.getNativeCache());
-        if (duration.isEternal()) {
-            duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, eternalExpiry.toMillis());
-        } else {
-            double millis = duration.getTimeUnit().toMillis(duration.getDurationAmount()) * expiryFactor;
-            duration = new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, Double.valueOf(millis).longValue());
-        }
-        if (duration.isZero()) {
-            return cache;
-        }
-        return new JCacheRefreshCache(cache.getNativeCache(), duration, cache.isAllowNullValues());
-    }
-
 
     private javax.cache.Cache<String, Boolean> createBustCache() {
         CacheManager manager = Caching.getCachingProvider().getCacheManager();
