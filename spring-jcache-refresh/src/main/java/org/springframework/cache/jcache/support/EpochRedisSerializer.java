@@ -10,7 +10,8 @@ import java.util.Arrays;
 
 @Data
 public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrapper<T>> {
-    private static final byte prefix = 0x1;
+    private static final byte magicNumber = 0x1;
+    private static final byte prefixLength = 9;
 
     @NonNull
     private RedisSerializer<T> delegate;
@@ -21,23 +22,25 @@ public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrappe
         if (serialized == null) {
             return null;
         }
-        byte[] bytes = new byte[9 + serialized.length];
+        byte[] bytes = new byte[prefixLength + serialized.length];
         long deadline = wrapper.getEpoch();
-        ByteBuffer.wrap(bytes).put(prefix).putLong(deadline).put(serialized);
+        ByteBuffer.wrap(bytes).put(magicNumber).putLong(deadline).put(serialized);
         return bytes;
     }
 
     @Override
     public EpochValueWrapper<T> deserialize(byte[] bytes) throws SerializationException {
-        long deadline = 0;
-        if (bytes.length > 8 && bytes[0] == prefix) {
-            deadline = ByteBuffer.wrap(bytes, 1, 9).getLong();
-            bytes = Arrays.copyOfRange(bytes, 9, bytes.length);
+        long deadline;
+        if (bytes.length > prefixLength) {
+            if (bytes[0] != magicNumber) {
+                throw new SerializationException("illegal magic byte for EpochValueWrapper");
+            }
+            deadline = ByteBuffer.wrap(bytes, 1, prefixLength).getLong();
+            bytes = Arrays.copyOfRange(bytes, prefixLength, bytes.length);
+        } else {
+            throw new SerializationException("illegal format for EpochValueWrapper: " + Arrays.toString(bytes));
         }
         T value = delegate.deserialize(bytes);
-        if (value == null) {
-            return null;
-        }
         return EpochValueWrapper.<T>builder().epoch(deadline).value(value).build();
     }
 }
