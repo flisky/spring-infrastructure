@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 @Data
-public class EpochRedisSerializer<T> implements RedisSerializer<EpochValueWrapper<T>> {
+public class EpochValueWrapperRedisSerializer<T> implements RedisSerializer<EpochValueWrapper<T>> {
     private static final byte magicNumber = 0x1;
     private static final byte prefixLength = 9;
 
