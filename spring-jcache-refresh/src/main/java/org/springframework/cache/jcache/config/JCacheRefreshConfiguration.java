@@ -26,7 +26,7 @@ public class JCacheRefreshConfiguration {
         resultField.setAccessible(true);
         CacheResultRefreshInterceptor resultInterceptor = new CacheResultRefreshInterceptor(
                 CacheBaseRefreshInterceptor.ofResult(properties.getExpiryFactor(), properties.getEternalExpiry(), expiryDuration),
-                properties.executionTimeout, aspect.getErrorHandler());
+                properties.getExecutionJitter(), properties.getExecutionTimeout(), aspect.getErrorHandler());
         ReflectionUtils.setField(resultField, aspect, resultInterceptor);
         resultField.setAccessible(false);
 

@@ -8,7 +8,8 @@ import java.time.Duration;
 @Data
 @ConfigurationProperties("spring.cache.refresh")
 public class JCacheRefreshProperties {
-    double expiryFactor = 0.95;
-    Duration eternalExpiry = Duration.ZERO;
-    Duration executionTimeout = Duration.ZERO;
+    private double expiryFactor = 0.95;
+    private Duration eternalExpiry = Duration.ZERO;
+    private Duration executionJitter = Duration.ZERO;
+    private Duration executionTimeout = Duration.ZERO;
 }

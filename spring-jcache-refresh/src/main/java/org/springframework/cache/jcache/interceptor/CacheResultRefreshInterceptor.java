@@ -15,18 +15,23 @@ import javax.cache.Caching;
 import javax.cache.annotation.CacheResult;
 import javax.cache.configuration.MutableConfiguration;
 import java.time.Duration;
+import java.util.Random;
 
 public class CacheResultRefreshInterceptor extends CacheResultInterceptor {
+    private static final Random random = new Random();
+
     private final CacheBaseRefreshInterceptor<CacheResultOperation, CacheResult> refreshInterceptor;
     private final Duration executionTimeout;
-
+    private final int jitter;
     private final javax.cache.Cache<String, Boolean> bustCache;
 
     public CacheResultRefreshInterceptor(CacheBaseRefreshInterceptor<CacheResultOperation, CacheResult> refreshInterceptor,
+                                         Duration jitter,
                                          Duration executionTimeout,
                                          CacheErrorHandler errorHandler) {
         super(errorHandler);
         this.refreshInterceptor = refreshInterceptor;
+        this.jitter = Math.toIntExact(jitter.toMillis());
         this.executionTimeout = executionTimeout;
         this.bustCache = createBustCache();
     }
@@ -46,6 +51,9 @@ public class CacheResultRefreshInterceptor extends CacheResultInterceptor {
             if (cachedValue != null) {
                 if (cachedValue instanceof EpochValueWrapper && ((EpochValueWrapper) cachedValue).isExpired() && !inFlight(cache, cacheKey)) {
                     Mono<Object> mono = Mono.fromRunnable(() -> invoke(context, invoker, cache, cacheKey)).ignoreElement().subscribeOn(Schedulers.elastic());
+                    if (jitter > 0) {
+                        mono = Mono.delay(Duration.ofMillis(random.nextInt(jitter))).then(mono);
+                    }
                     if (!executionTimeout.isZero()) {
                         mono = mono.timeout(executionTimeout);
                     }
